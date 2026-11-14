@@ -30,3 +30,15 @@ var facing := Vector2.DOWN
 var is_moving := false
 
 var _sprite: AnimatedSprite2D
+
+	## Placeholder body (only while there is no art): 12x18 px, origin at the feet.
+func _draw() -> void:
+	if _sprite != null:
+		return
+	var c: Color = PLAYER_COLORS[player_index % PLAYER_COLORS.size()]
+	draw_rect(Rect2(-6, -18, 12, 18), c)                          # suit
+	draw_rect(Rect2(-6, -18, 12, 18), Color.BLACK, false, 1.0)    # outline
+	var visor := Rect2(-1 + facing.x * 3, -15 + maxf(facing.y, -0.5) * 2, 6, 4)
+	if facing == Vector2.UP:
+		visor = Rect2(-4, -16, 8, 2)                              # back of helmet
+	draw_rect(visor, Color("#9fd8ff"))
