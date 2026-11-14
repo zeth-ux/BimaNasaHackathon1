@@ -84,3 +84,20 @@ func my_id() -> int:
 
 func my_slot() -> int:
 	return players.get(my_id(), {}).get("slot", -1)
+
+# ---------------------------------------------------------------- pure rules (tested)
+
+## Lowest free slot 0..MAX_PLAYERS-1, or -1 when full. Slot = colour and spawn point.
+static func free_slot(current: Dictionary) -> int:
+	var used := {}
+	for info in current.values():
+		used[info["slot"]] = true
+	for s in MAX_PLAYERS:
+		if not used.has(s):
+			return s
+	return -1
+
+
+static func clean_name(raw: String) -> String:
+	var n := raw.strip_edges().substr(0, 16)
+	return n if n != "" else "Player"
