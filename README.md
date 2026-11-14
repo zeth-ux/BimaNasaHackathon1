@@ -125,7 +125,7 @@ All costs, masses, power values, limits and scores are **simplified game values*
 
 ## Run it locally
 
-1. Install **Godot 4.3** (standard edition, not .NET).
+1. Install **Godot 4.7** (standard edition, not .NET).
 2. Clone this repository.
 3. Open Godot → **Import** → select `project.godot`.
 4. Press **F5** to play.
