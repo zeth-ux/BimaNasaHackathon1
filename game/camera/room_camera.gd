@@ -19,3 +19,17 @@ var target: Node2D:
 
 var current_room := Vector2i.ZERO
 var _tween: Tween
+
+func _ready() -> void:
+	zoom = Vector2(4, 4)     # 320x180 room -> 1280x720 screen
+	position_smoothing_enabled = false
+	if target:
+		_snap_to(RoomGrid.room_of(target.global_position))
+
+
+func _process(_delta: float) -> void:
+	if not is_instance_valid(target) or (_tween and _tween.is_running()):
+		return
+	var room := next_room(current_room, target.global_position, switch_margin)
+	if room != current_room:
+		_slide_to(room)
