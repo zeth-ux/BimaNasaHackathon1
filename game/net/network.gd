@@ -12,6 +12,8 @@ extends Node
 ##   Network.players   { peer_id: {"name": "Sufi", "slot": 0}, ... }   same on every device
 ##   Network.is_host() / Network.my_id() / Network.my_slot()
 ##
+##   Network.start_game("res://game/test_map.tscn")   host only: everyone loads that scene
+##
 ## Signals: players_changed, joined (you are in), join_failed(reason), disconnected(reason)
 
 signal players_changed
@@ -23,6 +25,7 @@ const PORT := 7777
 const MAX_PLAYERS := 4
 
 var players := {}          ## peer_id -> {"name": String, "slot": int}
+var game_scene := ""       ## scene the host started ("" = still in the lobby)
 var _my_name := ""
 
 
@@ -62,7 +65,16 @@ func join(address: String, player_name: String) -> Error:
 	return OK   # result arrives later as `joined` or `join_failed`
 
 
+## Host only: every device (including late joiners) switches to this scene.
+func start_game(scene_path: String) -> void:
+	if not is_host():
+		return
+	game_scene = scene_path
+	_load_scene.rpc(scene_path)
+
+
 func leave() -> void:
+	game_scene = ""
 	if multiplayer.multiplayer_peer and not (multiplayer.multiplayer_peer is OfflineMultiplayerPeer):
 		multiplayer.multiplayer_peer.close()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
@@ -123,6 +135,8 @@ func _register(player_name: String) -> void:
 	players[id] = {"name": clean_name(player_name), "slot": slot}
 	_sync_players.rpc(players)        # everyone (including the newcomer) gets the full list
 	players_changed.emit()
+	if game_scene != "":
+		_load_scene.rpc_id(id, game_scene)   # game already running: bring the newcomer in
 
 
 func _on_peer_disconnected(id: int) -> void:
@@ -144,6 +158,12 @@ func _sync_players(list: Dictionary) -> void:
 	players_changed.emit()
 	if not was_in and players.has(my_id()):
 		joined.emit()
+
+
+@rpc("authority", "call_local", "reliable")
+func _load_scene(scene_path: String) -> void:
+	game_scene = scene_path
+	get_tree().change_scene_to_file(scene_path)
 
 
 @rpc("authority", "reliable")

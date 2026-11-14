@@ -8,10 +8,15 @@ extends CharacterBody2D
 ##   While there is no "Sprite" child, a coloured placeholder is drawn.
 ##
 ## Other scripts use:
-##   player_index        which keyboard set controls this player (0..3)
+##   player_index        which keyboard set controls this player (0..3). Online: always 0 (WASD+E)
+##   color_index         which colour to draw (-1 = same as player_index). Online: the player's slot
 ##   can_move            false while the player is inside a mini-game or dialogue
 ##   facing / is_moving  read-only state for animation, footsteps, etc.
 ##   signal interact_requested(player)   emitted when the interact key is pressed
+##
+## Online (see game/net/network.gd): every device spawns every player.
+## Call set_multiplayer_authority(peer_id) before add_child. The owner's device moves
+## the player and sends its position ~20 times a second; other devices smooth it.
 
 const InputSetup := preload("res://game/input_setup.gd")
 
@@ -21,6 +26,7 @@ signal interact_requested(player: CharacterBody2D)
 const PLAYER_COLORS := [Color("#ffcf4a"), Color("#4ad6ff"), Color("#7dff7a"), Color("#ff7ad9")]
 
 @export_range(0, 3) var player_index := 0
+@export_range(-1, 3) var color_index := -1
 @export var max_speed := 70.0        ## pixels per second (world pixels, before camera zoom)
 @export var acceleration := 900.0    ## how fast it reaches max speed; higher = snappier
 @export var friction := 1200.0       ## how fast it stops when keys are released
@@ -30,6 +36,11 @@ var facing := Vector2.DOWN
 var is_moving := false
 
 var _sprite: AnimatedSprite2D
+
+const SEND_INTERVAL := 0.05          # seconds between position updates (20 per second)
+var _send_timer := 0.0
+var _net_target := Vector2.ZERO      # where a remote player should be
+var _has_net_target := false
 
 
 func _ready() -> void:
@@ -57,6 +68,9 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if not is_multiplayer_authority():
+		_follow_network(delta)        # someone else controls this player
+		return
 	var input := Vector2.ZERO
 	if can_move:
 		input = Input.get_vector(
@@ -64,6 +78,41 @@ func _physics_process(delta: float) -> void:
 			InputSetup.action(player_index, "up"), InputSetup.action(player_index, "down"))
 	step(input, delta)
 	move_and_slide()
+	_update_animation()
+	_send_state(delta)
+
+
+# ---------------------------------------------------------------- online sync
+
+func _is_online() -> bool:
+	return multiplayer.multiplayer_peer != null and not (multiplayer.multiplayer_peer is OfflineMultiplayerPeer)
+
+
+func _send_state(delta: float) -> void:
+	if not _is_online():
+		return
+	_send_timer -= delta
+	if _send_timer <= 0.0:
+		_send_timer = SEND_INTERVAL
+		_net_state.rpc(position, facing, is_moving)
+
+
+@rpc("authority", "unreliable_ordered")
+func _net_state(pos: Vector2, dir: Vector2, moving: bool) -> void:
+	_net_target = pos
+	facing = dir
+	is_moving = moving
+	if not _has_net_target:
+		position = pos               # first update: jump straight there
+		_has_net_target = true
+
+
+func _follow_network(delta: float) -> void:
+	if _has_net_target:
+		if position.distance_to(_net_target) > 48.0:
+			position = _net_target   # too far behind (lag spike / room change): snap
+		else:
+			position = position.lerp(_net_target, 1.0 - exp(-15.0 * delta))
 	_update_animation()
 
 
@@ -80,7 +129,7 @@ func step(input: Vector2, delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if can_move and event.is_action_pressed(InputSetup.action(player_index, "interact")):
+	if can_move and is_multiplayer_authority() and event.is_action_pressed(InputSetup.action(player_index, "interact")):
 		interact_requested.emit(self)
 		get_viewport().set_input_as_handled()
 
@@ -106,7 +155,8 @@ func _update_animation() -> void:
 func _draw() -> void:
 	if _sprite != null:
 		return
-	var c: Color = PLAYER_COLORS[player_index % PLAYER_COLORS.size()]
+	var ci := player_index if color_index < 0 else color_index
+	var c: Color = PLAYER_COLORS[ci % PLAYER_COLORS.size()]
 	draw_rect(Rect2(-6, -18, 12, 18), c)                          # suit
 	draw_rect(Rect2(-6, -18, 12, 18), Color.BLACK, false, 1.0)    # outline
 	var visor := Rect2(-1 + facing.x * 3, -15 + maxf(facing.y, -0.5) * 2, 6, 4)
