@@ -56,3 +56,4 @@ func _slide_to(room: Vector2i) -> void:
 	_tween.finished.connect(func():
 		if is_instance_valid(target) and "can_move" in target:
 			target.can_move = true)
+

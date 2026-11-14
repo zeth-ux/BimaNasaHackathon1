@@ -8,27 +8,29 @@ extends Node2D
 const InputSetup := preload("res://game/input_setup.gd")
 const RoomGrid := preload("res://game/world/room_grid.gd")
 const PlayerScene := preload("res://game/player/player.tscn")
+const RoomCamera := preload("res://game/camera/room_camera.gd")
 
 ## Which rooms exist. Doors are made automatically between neighbouring rooms.
 const ROOMS: Array[Vector2i] = [Vector2i(0, 0), Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, 1)]
 const WALL := 8.0     ## wall thickness inside each room's edge
 const DOOR := 32.0    ## doorway width
 
+## Camera variables for room_camera.gd
 var players: Array = []
 var hud: Label
+var camera: Camera2D
 var _blocks: Array[Rect2] = []   # for drawing
 
 
 func _ready() -> void:
 	get_viewport().canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
 	InputSetup.ensure()
+
 	for room in ROOMS:
-		_build_room(room)
-	# Temporary: one still camera that shows all 4 rooms (640x360 world at zoom 2 = 1280x720).
-	var cam := Camera2D.new()
-	cam.position = RoomGrid.ROOM_SIZE
-	cam.zoom = Vector2(2, 2)
-	add_child(cam)
+	    _build_room(room)
+
+    camera = RoomCamera.new()
+	add_child(camera)
 	_build_hud()
 	set_player_count(4)
 
@@ -42,8 +44,9 @@ func set_player_count(n: int) -> void:
 		var p = PlayerScene.instantiate()
 		p.player_index = i
 		p.position = start + Vector2(-10 + (i % 2) * 20, -4 + (i / 2) * 18)   # 2x2 group, lined up with the doors
-		add_child(p)
+        add_child(p)
 		players.append(p)
+	camera.target = players[0]     # step 5 gives every player their own camera
 
 
 func _unhandled_input(event: InputEvent) -> void:
