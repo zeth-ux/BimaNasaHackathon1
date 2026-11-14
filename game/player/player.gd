@@ -31,6 +31,39 @@ var is_moving := false
 
 var _sprite: AnimatedSprite2D
 
+func _ready() -> void:
+	InputSetup.ensure()
+	_sprite = get_node_or_null("Sprite") as AnimatedSprite2D
+	if get_node_or_null("CollisionShape2D") == null:
+		# Feet-sized box: in top-down games only the feet should hit walls.
+		var shape := CollisionShape2D.new()
+		shape.name = "CollisionShape2D"
+		var rect := RectangleShape2D.new()
+		rect.size = Vector2(10, 6)
+		shape.shape = rect
+		shape.position = Vector2(0, -3)
+		add_child(shape)
+	# Layer 2 = players, mask 1 = world. Players pass through each other (like Among Us).
+	collision_layer = 2
+	collision_mask = 1
+	motion_mode = CharacterBody2D.MOTION_MODE_FLOATING
+	queue_redraw()
+	# Opened on its own with F6? Add a still, zoomed camera so you can see it move.
+	if get_parent() == get_tree().root:
+		var cam := Camera2D.new()
+		cam.zoom = Vector2(4, 4)
+		get_parent().add_child.call_deferred(cam)
+
+func _physics_process(delta: float) -> void:
+	var input := Vector2.ZERO
+	if can_move:
+		input = Input.get_vector(
+			InputSetup.action(player_index, "left"), InputSetup.action(player_index, "right"),
+			InputSetup.action(player_index, "up"), InputSetup.action(player_index, "down"))
+	step(input, delta)
+	move_and_slide()
+	_update_animation()
+
 ## Movement maths, separated from input so tests can drive it directly.
 func step(input: Vector2, delta: float) -> void:
 	if input.length() > 1.0:
