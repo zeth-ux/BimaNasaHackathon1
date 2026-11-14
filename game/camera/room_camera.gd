@@ -33,3 +33,26 @@ func _process(_delta: float) -> void:
 	var room := next_room(current_room, target.global_position, switch_margin)
 	if room != current_room:
 		_slide_to(room)
+
+## Pure rule (tested): stay in the current room until the position is clearly
+## (margin pixels) inside another room.
+static func next_room(current: Vector2i, pos: Vector2, margin: float) -> Vector2i:
+	if RoomGrid.room_rect(current).grow(margin).has_point(pos):
+		return current
+	return RoomGrid.room_of(pos)
+
+
+func _snap_to(room: Vector2i) -> void:
+	current_room = room
+	global_position = RoomGrid.room_center(room)
+
+
+func _slide_to(room: Vector2i) -> void:
+	current_room = room
+	if freeze_during_slide and "can_move" in target:
+		target.can_move = false
+	_tween = create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_tween.tween_property(self, "global_position", RoomGrid.room_center(room), slide_time)
+	_tween.finished.connect(func():
+		if is_instance_valid(target) and "can_move" in target:
+			target.can_move = true)
