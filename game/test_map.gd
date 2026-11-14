@@ -27,9 +27,9 @@ func _ready() -> void:
 	InputSetup.ensure()
 
 	for room in ROOMS:
-	    _build_room(room)
+		_build_room(room)
 
-    camera = RoomCamera.new()
+	camera = RoomCamera.new()
 	add_child(camera)
 	_build_hud()
 	set_player_count(4)
@@ -44,7 +44,7 @@ func set_player_count(n: int) -> void:
 		var p = PlayerScene.instantiate()
 		p.player_index = i
 		p.position = start + Vector2(-10 + (i % 2) * 20, -4 + (i / 2) * 18)   # 2x2 group, lined up with the doors
-        add_child(p)
+		add_child(p)
 		players.append(p)
 	camera.target = players[0]     # step 5 gives every player their own camera
 
