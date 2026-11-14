@@ -101,3 +101,59 @@ static func free_slot(current: Dictionary) -> int:
 static func clean_name(raw: String) -> String:
 	var n := raw.strip_edges().substr(0, 16)
 	return n if n != "" else "Player"
+
+# ---------------------------------------------------------------- host side
+
+func _on_peer_connected(_id: int) -> void:
+	pass   # host waits for the newcomer to send its name (_register)
+
+
+@rpc("any_peer", "reliable")
+func _register(player_name: String) -> void:
+	if not multiplayer.is_server():
+		return
+	var id := multiplayer.get_remote_sender_id()
+	var slot := free_slot(players)
+	if slot == -1:
+		_refused.rpc_id(id, "The team is full (%d players)." % MAX_PLAYERS)
+		return
+	players[id] = {"name": clean_name(player_name), "slot": slot}
+	_sync_players.rpc(players)        # everyone (including the newcomer) gets the full list
+	players_changed.emit()
+
+
+func _on_peer_disconnected(id: int) -> void:
+	if multiplayer.is_server() and players.erase(id):
+		_sync_players.rpc(players)
+		players_changed.emit()
+
+
+# ---------------------------------------------------------------- client side
+
+func _on_connected_to_server() -> void:
+	_register.rpc_id(1, _my_name)
+
+
+@rpc("authority", "reliable")
+func _sync_players(list: Dictionary) -> void:
+	var was_in := players.has(my_id())
+	players = list
+	players_changed.emit()
+	if not was_in and players.has(my_id()):
+		joined.emit()
+
+
+@rpc("authority", "reliable")
+func _refused(reason: String) -> void:
+	leave()
+	join_failed.emit(reason)
+
+
+func _on_connection_failed() -> void:
+	leave()
+	join_failed.emit("Could not reach the host. Check the address and that the host is running.")
+
+
+func _on_server_disconnected() -> void:
+	leave()
+	disconnected.emit("The host left the game.")
