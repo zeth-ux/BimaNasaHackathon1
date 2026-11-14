@@ -31,6 +31,7 @@ var is_moving := false
 
 var _sprite: AnimatedSprite2D
 
+
 func _ready() -> void:
 	InputSetup.ensure()
 	_sprite = get_node_or_null("Sprite") as AnimatedSprite2D
@@ -54,6 +55,7 @@ func _ready() -> void:
 		cam.zoom = Vector2(4, 4)
 		get_parent().add_child.call_deferred(cam)
 
+
 func _physics_process(delta: float) -> void:
 	var input := Vector2.ZERO
 	if can_move:
@@ -63,6 +65,7 @@ func _physics_process(delta: float) -> void:
 	step(input, delta)
 	move_and_slide()
 	_update_animation()
+
 
 ## Movement maths, separated from input so tests can drive it directly.
 func step(input: Vector2, delta: float) -> void:
@@ -98,7 +101,8 @@ func _update_animation() -> void:
 	if _sprite.sprite_frames and _sprite.sprite_frames.has_animation(anim) and _sprite.animation != anim:
 		_sprite.play(anim)
 
-	## Placeholder body (only while there is no art): 12x18 px, origin at the feet.
+
+## Placeholder body (only while there is no art): 12x18 px, origin at the feet.
 func _draw() -> void:
 	if _sprite != null:
 		return
