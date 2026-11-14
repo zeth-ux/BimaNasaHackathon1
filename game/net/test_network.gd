@@ -1,7 +1,8 @@
 extends Control
 ## Network test screen. Owner: Sufi. Open game/net/test_network.tscn and run it
 ## in 2+ windows (Debug > Customize Run Instances...). Window 1: Host. Others: Join.
-## Barebones on purpose; the real lobby (N2) is styled by Zaliq.
+## Host clicks "Start" -> every window loads the test map. Barebones on purpose;
+## the real lobby (N2) is styled by Zaliq.
 
 var _name: LineEdit
 var _address: LineEdit
@@ -28,9 +29,10 @@ func _ready() -> void:
 	_button(row, "Host", func(): _show_error(Network.host(_name.text), "host"))
 	_button(row, "Join", func(): _show_error(Network.join(_address.text, _name.text), "join"))
 	_button(row, "Leave", func(): Network.leave(); _status.text = "Offline")
+	_button(row, "Start (host)", func(): Network.start_game("res://game/test_map.tscn"))
 
 	_status = Label.new()
-	_status.text = "Offline"
+	_status.text = Network.get_meta("last_message", "Offline")
 	box.add_child(_status)
 	_list = Label.new()
 	box.add_child(_list)

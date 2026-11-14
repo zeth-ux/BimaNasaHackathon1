@@ -1,21 +1,22 @@
 extends Node2D
 ## Test map: 4 connected rooms (2x2) built from placeholder blocks.
-## Owner: Sufi (gameplay). Open game/test_map.tscn and press F6.
-##   F1..F4  number of players · P1 WASD · P2 Arrows · P3 IJKL · P4 Numpad 8456
-## The whole map is shown at once for now; the room camera comes in step 4.
-## Real rooms will be painted with tiles later; this file only tests movement.
+## Owner: Sufi (gameplay). Real rooms will be painted with tiles later.
+##
+## OFFLINE (open test_map.tscn, F6): F1..F4 local players, camera follows P1.
+## ONLINE  (host clicks Start in game/net/test_network.tscn): one player per device,
+##          everyone uses WASD + E, your camera follows YOUR player.
 
 const InputSetup := preload("res://game/input_setup.gd")
 const RoomGrid := preload("res://game/world/room_grid.gd")
 const PlayerScene := preload("res://game/player/player.tscn")
 const RoomCamera := preload("res://game/camera/room_camera.gd")
+const LOBBY := "res://game/net/test_network.tscn"
 
 ## Which rooms exist. Doors are made automatically between neighbouring rooms.
 const ROOMS: Array[Vector2i] = [Vector2i(0, 0), Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, 1)]
 const WALL := 8.0     ## wall thickness inside each room's edge
 const DOOR := 32.0    ## doorway width
 
-## Camera variables for room_camera.gd
 var players: Array = []
 var hud: Label
 var camera: Camera2D
@@ -25,42 +26,95 @@ var _blocks: Array[Rect2] = []   # for drawing
 func _ready() -> void:
 	get_viewport().canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
 	InputSetup.ensure()
-
 	for room in ROOMS:
 		_build_room(room)
-
 	camera = RoomCamera.new()
 	add_child(camera)
 	_build_hud()
-	set_player_count(4)
+	if Network.is_online():
+		Network.players_changed.connect(_sync_online_players)
+		Network.disconnected.connect(_back_to_lobby)
+		_sync_online_players()
+	else:
+		set_player_count(4)
 
+
+# ---------------------------------------------------------------- offline (local) players
 
 func set_player_count(n: int) -> void:
 	for p in players:
 		p.queue_free()
 	players.clear()
-	var start := RoomGrid.room_center(Vector2i(0, 0))
 	for i in n:
 		var p = PlayerScene.instantiate()
 		p.player_index = i
-		p.position = start + Vector2(-10 + (i % 2) * 20, -4 + (i / 2) * 18)   # 2x2 group, lined up with the doors
+		p.position = spawn_point(i)
 		add_child(p)
 		players.append(p)
-	camera.target = players[0]     # step 5 gives every player their own camera
+	camera.target = players[0]
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if Network.is_online():
+		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		var k: int = event.physical_keycode
 		if k >= KEY_F1 and k <= KEY_F4:
 			set_player_count(k - KEY_F1 + 1)
 
 
+# ---------------------------------------------------------------- online players
+
+## Every device runs this with the same Network.players list, so every device
+## ends up with the same player nodes ("P_<peer id>"), each owned by its peer.
+func _sync_online_players() -> void:
+	var wanted := Network.players
+	for p in players.duplicate():                         # remove players who left
+		if not wanted.has(p.get_multiplayer_authority()):
+			players.erase(p)
+			p.queue_free()
+	for id in wanted:                                     # add players who joined
+		if has_node("P_%d" % id):
+			continue
+		var slot: int = wanted[id]["slot"]
+		var p = PlayerScene.instantiate()
+		p.name = "P_%d" % id
+		p.set_multiplayer_authority(id)
+		p.player_index = 0                                # everyone uses WASD on their own device
+		p.color_index = slot
+		p.position = spawn_point(slot)
+		add_child(p)
+		players.append(p)
+		if id == Network.my_id():
+			camera.target = p
+
+
+func _back_to_lobby(reason: String) -> void:
+	Network.set_meta("last_message", "Disconnected: " + reason)
+	get_tree().change_scene_to_file(LOBBY)
+
+
+# ---------------------------------------------------------------- shared
+
+## 2x2 group in the first room, lined up with the doors.
+static func spawn_point(slot: int) -> Vector2:
+	return RoomGrid.room_center(Vector2i(0, 0)) + Vector2(-10 + (slot % 2) * 20, -4 + (slot / 2) * 18)
+
+
 func _process(_delta: float) -> void:
-	var lines := ["TEST MAP  ·  F1-F4: players (%d)" % players.size()]
-	for p in players:
-		var r: Vector2i = RoomGrid.room_of(p.position)
-		lines.append("P%d (%s): room %d,%d" % [p.player_index + 1, InputSetup.LABELS[p.player_index], r.x, r.y])
+	var lines := []
+	if Network.is_online():
+		lines.append("ONLINE  ·  %s  ·  %d players" % ["HOST" if Network.is_host() else "guest", players.size()])
+		for p in players:
+			var info: Dictionary = Network.players.get(p.get_multiplayer_authority(), {})
+			var r: Vector2i = RoomGrid.room_of(p.position)
+			lines.append("P%d %s%s: room %d,%d" % [p.color_index + 1, info.get("name", "?"),
+				" (you)" if p.is_multiplayer_authority() else "", r.x, r.y])
+	else:
+		lines.append("OFFLINE  ·  F1-F4: players (%d)" % players.size())
+		for p in players:
+			var r: Vector2i = RoomGrid.room_of(p.position)
+			lines.append("P%d (%s): room %d,%d" % [p.player_index + 1, InputSetup.LABELS[p.player_index], r.x, r.y])
 	hud.text = "\n".join(lines)
 
 
