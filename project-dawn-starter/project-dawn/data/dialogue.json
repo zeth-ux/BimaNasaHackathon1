@@ -1,0 +1,20 @@
+{
+  "act1_intro": [
+    { "speaker": "narrator", "text": "Bunker 4. The sky outside is lethal. The old satellites are going dark one by one." },
+    { "speaker": "ceres", "text": "Good morning. I am CERES. You four are humanity's mission team now." }
+  ],
+  "m1_1_brief": [
+    { "speaker": "navigator", "text": "Before we launch anything, we need a pad and a ground station." }
+  ],
+  "m1_2_brief": [
+    { "speaker": "ceres", "text": "We need numbers, not guesses. How much UV is reaching the ground?" },
+    { "speaker": "scientist", "text": "A UV sensor on a CubeSat could map the damage in days." },
+    { "speaker": "engineer", "text": "Then we build it small. Every gram costs fuel." }
+  ],
+  "m1_2_success": [
+    { "speaker": "ceres", "text": "Signal received. The damage is global. The ozone meter is live." }
+  ],
+  "m1_2_fail": [
+    { "speaker": "ceres", "text": "Signal lost. Read the report: the reason is always in the numbers." }
+  ]
+}

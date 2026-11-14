@@ -1,0 +1,4 @@
+[
+  { "id": "rideshare_small", "name": "Salvaged rideshare", "capacity_kg": 50, "cost": 60, "worlds": ["earth"], "unlocked_at_start": true },
+  { "id": "salvaged_booster", "name": "Salvaged booster", "capacity_kg": 650, "cost": 200, "worlds": ["earth", "moon"], "unlocked_at_start": false }
+]

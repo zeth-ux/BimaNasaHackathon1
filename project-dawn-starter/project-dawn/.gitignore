@@ -1,0 +1,10 @@
+# Godot 4
+.godot/
+*.translation
+build/
+export/
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+*.tmp

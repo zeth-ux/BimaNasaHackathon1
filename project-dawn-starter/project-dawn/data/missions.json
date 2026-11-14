@@ -1,0 +1,33 @@
+[
+  {
+    "id": "m1_1_launch_site", "act": "act1", "objective_ref": "1.1", "kind": "choice", "optional": false,
+    "title": "Build the launch site", "world": "earth", "stage": "satellite",
+    "brief_dialogue": "m1_1_brief",
+    "summary": "Choose where to clear the launch pad and set up the ground station.",
+    "unlock_after": [], "budget": 0, "eclipse_minutes": 0, "sunlight_factor": 1.0, "radiation": "low",
+    "required_categories": [], "requirements": [], "fuel": null,
+    "choices": [
+      { "id": "site_equator", "label": "Coastal site near the equator: Earth's spin gives a free speed boost", "result_dialogue": "m1_1_equator" },
+      { "id": "site_bunker", "label": "Next to Bunker 4: safer for the crew, slightly more fuel per launch", "result_dialogue": "m1_1_bunker" }
+    ],
+    "rewards": { "ozone": 0, "credits": 0, "unlock_parts": [], "unlock_optionals": ["opt_b_platform_shield"] },
+    "success_dialogue": "m1_1_success", "fail_dialogue": "", "real_mission": ""
+  },
+  {
+    "id": "m1_2_ozone_cubesat", "act": "act1", "objective_ref": "1.2", "kind": "design", "optional": false,
+    "title": "Launch the first CubeSat", "world": "earth", "stage": "satellite",
+    "brief_dialogue": "m1_2_brief",
+    "summary": "Build a tiny satellite from salvaged parts and map the ozone damage.",
+    "unlock_after": ["m1_1_launch_site"], "budget": 200, "eclipse_minutes": 36, "sunlight_factor": 1.0, "radiation": "low",
+    "required_categories": ["structure", "computer", "instrument", "power", "battery", "comms"],
+    "requirements": [
+      { "id": "uv", "type": "has_part_tag", "tag": "uv", "label": "Carry a UV sensor" },
+      { "id": "eclipse", "type": "battery_eclipse", "label": "Stay powered through 36 min of Earth's shadow" },
+      { "id": "downlink", "type": "min_downlink", "value": 5, "label": "Send home at least 5 MB per day" },
+      { "id": "budget", "type": "within_budget", "label": "Stay within 200 credits" }
+    ],
+    "fuel": null, "choices": null,
+    "rewards": { "ozone": 5, "credits": 150, "unlock_parts": ["radio_sband"], "unlock_optionals": ["opt_a_bunker_link"] },
+    "success_dialogue": "m1_2_success", "fail_dialogue": "m1_2_fail", "real_mission": "phonesat"
+  }
+]
