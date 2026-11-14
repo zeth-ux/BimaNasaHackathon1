@@ -10,7 +10,6 @@ var _list: Label
 
 
 func _ready() -> void:
-	print("test_network ready")
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	var box := VBoxContainer.new()
 	box.position = Vector2(40, 40)
