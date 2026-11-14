@@ -33,6 +33,7 @@ func _ready() -> void:
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 
+
 # ---------------------------------------------------------------- public API
 
 func host(player_name: String) -> Error:
@@ -85,6 +86,7 @@ func my_id() -> int:
 func my_slot() -> int:
 	return players.get(my_id(), {}).get("slot", -1)
 
+
 # ---------------------------------------------------------------- pure rules (tested)
 
 ## Lowest free slot 0..MAX_PLAYERS-1, or -1 when full. Slot = colour and spawn point.
@@ -101,6 +103,7 @@ static func free_slot(current: Dictionary) -> int:
 static func clean_name(raw: String) -> String:
 	var n := raw.strip_edges().substr(0, 16)
 	return n if n != "" else "Player"
+
 
 # ---------------------------------------------------------------- host side
 
