@@ -32,3 +32,55 @@ func _ready() -> void:
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
+
+# ---------------------------------------------------------------- public API
+
+func host(player_name: String) -> Error:
+	leave()
+	var peer := ENetMultiplayerPeer.new()
+	# Room for one extra guest, so a 5th player gets a clear "team is full" message.
+	var err := peer.create_server(PORT, MAX_PLAYERS)
+	if err != OK:
+		return err   # usually: port already in use (another host is running on this machine)
+	multiplayer.multiplayer_peer = peer
+	_my_name = player_name
+	players = {1: {"name": clean_name(player_name), "slot": 0}}
+	players_changed.emit()
+	joined.emit()
+	return OK
+
+
+func join(address: String, player_name: String) -> Error:
+	leave()
+	var peer := ENetMultiplayerPeer.new()
+	var err := peer.create_client(address, PORT)
+	if err != OK:
+		return err
+	multiplayer.multiplayer_peer = peer
+	_my_name = player_name
+	return OK   # result arrives later as `joined` or `join_failed`
+
+
+func leave() -> void:
+	if multiplayer.multiplayer_peer and not (multiplayer.multiplayer_peer is OfflineMultiplayerPeer):
+		multiplayer.multiplayer_peer.close()
+	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
+	if not players.is_empty():
+		players = {}
+		players_changed.emit()
+
+
+func is_online() -> bool:
+	return not players.is_empty()
+
+
+func is_host() -> bool:
+	return is_online() and multiplayer.is_server()
+
+
+func my_id() -> int:
+	return multiplayer.get_unique_id()
+
+
+func my_slot() -> int:
+	return players.get(my_id(), {}).get("slot", -1)
