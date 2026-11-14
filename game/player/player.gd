@@ -31,6 +31,40 @@ var is_moving := false
 
 var _sprite: AnimatedSprite2D
 
+## Movement maths, separated from input so tests can drive it directly.
+func step(input: Vector2, delta: float) -> void:
+	if input.length() > 1.0:
+		input = input.normalized()   # diagonal is not faster than straight
+	if input != Vector2.ZERO:
+		velocity = velocity.move_toward(input * max_speed, acceleration * delta)
+		facing = _snap_to_4(input)
+	else:
+		velocity = velocity.move_toward(Vector2.ZERO, friction * delta)
+	is_moving = velocity.length() > 1.0
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if can_move and event.is_action_pressed(InputSetup.action(player_index, "interact")):
+		interact_requested.emit(self)
+		get_viewport().set_input_as_handled()
+
+
+func _snap_to_4(v: Vector2) -> Vector2:
+	if absf(v.x) > absf(v.y):
+		return Vector2.RIGHT if v.x > 0 else Vector2.LEFT
+	return Vector2.DOWN if v.y > 0 else Vector2.UP
+
+
+func _update_animation() -> void:
+	if _sprite == null:
+		queue_redraw()   # placeholder shows facing
+		return
+	var dir := "down" if facing == Vector2.DOWN else "up" if facing == Vector2.UP else "side"
+	var anim := ("walk_" if is_moving else "idle_") + dir
+	_sprite.flip_h = facing == Vector2.LEFT
+	if _sprite.sprite_frames and _sprite.sprite_frames.has_animation(anim) and _sprite.animation != anim:
+		_sprite.play(anim)
+
 	## Placeholder body (only while there is no art): 12x18 px, origin at the feet.
 func _draw() -> void:
 	if _sprite != null:
